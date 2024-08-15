@@ -315,6 +315,7 @@ pub fn render_library_page(
     // 1. Get data
     let curr_context_uri = state.player.read().playing_context_id().map(|c| c.uri());
     let data = state.data.read();
+    let configs = config::get_config();
 
     let focus_state = match ui.current_page() {
         PageState::Library { state } => state.focus,
@@ -326,12 +327,17 @@ pub fn render_library_page(
     // - a playlists window
     // - a saved albums window
     // - a followed artists window
+
     let chunks = Layout::horizontal([
-        Constraint::Percentage(40),
-        Constraint::Percentage(40),
-        Constraint::Percentage(20),
+        Constraint::Percentage(configs.app_config.layout.library.playlist_percent),
+        Constraint::Percentage(configs.app_config.layout.library.album_percent),
+        Constraint::Percentage(
+            100 - (configs.app_config.layout.library.album_percent
+                + configs.app_config.layout.library.playlist_percent),
+        ),
     ])
     .split(rect);
+
     let playlist_rect = construct_and_render_block(
         "Playlists",
         &ui.theme,
@@ -855,11 +861,11 @@ fn render_track_table(
                 ((id + 1).to_string(), Style::default())
             };
             Row::new(vec![
-                Cell::from(if data.user_data.is_liked_track(t) {
-                    &configs.app_config.liked_icon
+                if data.user_data.is_liked_track(t) {
+                    Cell::from(&configs.app_config.liked_icon as &str).style(ui.theme.like())
                 } else {
-                    ""
-                }),
+                    Cell::from("")
+                },
                 Cell::from(id),
                 Cell::from(t.display_name()),
                 Cell::from(t.artists_info()),
@@ -873,7 +879,6 @@ fn render_track_table(
             .style(style)
         })
         .collect::<Vec<_>>();
-
     let track_table = Table::new(
         rows,
         [
